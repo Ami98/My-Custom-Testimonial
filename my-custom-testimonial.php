@@ -2,7 +2,9 @@
 
 /**
  * Plugin Name: My Custom Testimonial
- * Description: A plugin for managing and displaying testimonials with front-end submission.
+ * Description:A testimonial management plugin with front-end submission support.Place [testimonial_form] where you want users to submit testimonials.Use [testimonials] to show all testimonials, or filter them using [testimonials category="category_name"] or [testimonials tag="tag_name"].
+
+
  * Version: 1.0
  * Author: Your Name
  */
