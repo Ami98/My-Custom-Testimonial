@@ -1,92 +1,101 @@
 <?php
 
 /**
- * Plugin Name: My Custom Testimonial Plugin
- * Description: A lightweight and easy-to-use plugin for displaying testimonials via shortcode. Users can showcase testimonials on the frontend without requiring login access. The plugin also includes an admin interface for managing testimonials within the WordPress dashboard.
+ * Plugin Name: My Custom Testimonial
+ * Description: A plugin for managing and displaying testimonials with front-end submission.
  * Version: 1.0
- * Author: Ami Dalwadi
+ * Author: Your Name
  */
 
-// Exit if accessed directly
-if (!defined('ABSPATH')) {
-    exit;
-}
+defined('ABSPATH') || exit;
 
-// Register Custom Post Type
-function tp_register_testimonial_post_type()
+// Load form handler
+require_once plugin_dir_path(__FILE__) . 'includes/form-handler.php';
+
+// Register CPT
+function mct_register_testimonial_post_type()
 {
-    $labels = array(
-        'name' => 'Testimonials',
-        'singular_name' => 'Testimonial',
-        'menu_name' => 'Testimonials',
-        'name_admin_bar' => 'Testimonial',
-        'add_new' => 'Add New',
-        'add_new_item' => 'Add New Testimonial',
-        'edit_item' => 'Edit Testimonial',
-        'new_item' => 'New Testimonial',
-        'view_item' => 'View Testimonial',
-        'all_items' => 'All Testimonials',
-        'search_items' => 'Search Testimonials',
-    );
-
-    $args = array(
-        'label' => 'Testimonial',
-        'labels' => $labels,
+    register_post_type('testimonial', [
+        'labels' => [
+            'name' => 'Testimonials',
+            'singular_name' => 'Testimonial',
+        ],
         'public' => true,
+        'has_archive' => true,
         'menu_icon' => 'dashicons-testimonial',
-        'has_archive' => false,
-        'supports' => array('title', 'editor', 'thumbnail'),
-    );
-
-    register_post_type('testimonial', $args);
+        'supports' => ['title', 'editor', 'thumbnail'],
+        'show_in_rest' => true,
+    ]);
 }
-add_action('init', 'tp_register_testimonial_post_type');
+add_action('init', 'mct_register_testimonial_post_type');
+
+// Register taxonomies
+function mct_register_testimonial_taxonomies()
+{
+    register_taxonomy('testimonial_category', 'testimonial', [
+        'label' => 'Categories',
+        'hierarchical' => true,
+        'show_admin_column' => true,
+        'rewrite' => ['slug' => 'testimonial-category'],
+    ]);
+
+    register_taxonomy('testimonial_tag', 'testimonial', [
+        'label' => 'Tags',
+        'hierarchical' => false,
+        'show_admin_column' => true,
+        'rewrite' => ['slug' => 'testimonial-tag'],
+    ]);
+}
+add_action('init', 'mct_register_testimonial_taxonomies');
 
 // Shortcode to display testimonials
-function tp_testimonial_shortcode($atts)
+function mct_testimonial_shortcode($atts)
 {
-    $atts = shortcode_atts(array(
+    $atts = shortcode_atts([
         'category' => '',
         'tag' => '',
         'posts' => -1,
-    ), $atts);
+    ], $atts);
 
-    $tax_query = array('relation' => 'AND');
+    $tax_query = ['relation' => 'AND'];
 
     if (!empty($atts['category'])) {
-        $tax_query[] = array(
+        $tax_query[] = [
             'taxonomy' => 'testimonial_category',
             'field'    => 'slug',
             'terms'    => explode(',', $atts['category']),
-        );
+        ];
     }
 
     if (!empty($atts['tag'])) {
-        $tax_query[] = array(
+        $tax_query[] = [
             'taxonomy' => 'testimonial_tag',
             'field'    => 'slug',
             'terms'    => explode(',', $atts['tag']),
-        );
+        ];
     }
 
-    $args = array(
+    $args = [
         'post_type' => 'testimonial',
         'posts_per_page' => $atts['posts'],
-        'tax_query' => count($tax_query) > 1 ? $tax_query : '',
-    );
+    ];
+
+    if (count($tax_query) > 1) {
+        $args['tax_query'] = $tax_query;
+    }
 
     $query = new WP_Query($args);
-    $output = '<div class="tp-testimonials">';
+    $output = '<div class="mct-testimonials">';
 
     if ($query->have_posts()) {
         while ($query->have_posts()) {
             $query->the_post();
-            $output .= '<div class="tp-testimonial">';
+            $output .= '<div class="mct-testimonial">';
             if (has_post_thumbnail()) {
                 $output .= get_the_post_thumbnail(get_the_ID(), 'thumbnail');
             }
-            $output .= '<h3>' . get_the_title() . '</h3>';
-            $output .= '<div>' . get_the_content() . '</div>';
+            $output .= '<h3>' . esc_html(get_the_title()) . '</h3>';
+            $output .= '<div>' . wp_kses_post(get_the_content()) . '</div>';
             $output .= '</div>';
         }
         wp_reset_postdata();
@@ -97,39 +106,21 @@ function tp_testimonial_shortcode($atts)
     $output .= '</div>';
     return $output;
 }
+add_shortcode('testimonials', 'mct_testimonial_shortcode');
 
-add_shortcode('testimonials', 'tp_testimonial_shortcode');
-
-// Register Custom Taxonomies for Testimonials
-function tp_register_testimonial_taxonomies()
+// Enqueue frontend assets
+function mct_enqueue_assets()
 {
-    // Category
-    register_taxonomy('testimonial_category', 'testimonial', array(
-        'label' => 'Categories',
-        'hierarchical' => true,
-        'show_admin_column' => true,
-        'rewrite' => array('slug' => 'testimonial-category'),
-    ));
-
-    // Tag
-    register_taxonomy('testimonial_tag', 'testimonial', array(
-        'label' => 'Tags',
-        'hierarchical' => false,
-        'show_admin_column' => true,
-        'rewrite' => array('slug' => 'testimonial-tag'),
-    ));
+    if (!is_admin()) {
+        wp_enqueue_style('mct-frontend-css', plugin_dir_url(__FILE__) . 'assets/css/frontend.css', [], '1.0');
+        wp_enqueue_script('mct-frontend-js', plugin_dir_url(__FILE__) . 'assets/js/frontend.js', [], '1.0', true);
+    }
 }
-add_action('init', 'tp_register_testimonial_taxonomies');
+add_action('wp_enqueue_scripts', 'mct_enqueue_assets');
 
-
-
-function tp_testimonial_styles()
+// Plugin deactivation hook
+register_deactivation_hook(__FILE__, 'mct_deactivate_plugin');
+function mct_deactivate_plugin()
 {
-    echo '<style>
-        .tp-testimonials { display: flex; flex-wrap: wrap; gap: 20px; }
-        .tp-testimonial { border: 1px solid #ddd; padding: 15px; width: 300px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .tp-testimonial img { max-width: 100%; height: auto; border-radius: 50%; }
-        .tp-testimonial h3 { margin-top: 10px; font-size: 1.2em; }
-    </style>';
+    // Example cleanup (optional): delete_option('mct_custom_option');
 }
-add_action('wp_head', 'tp_testimonial_styles');
