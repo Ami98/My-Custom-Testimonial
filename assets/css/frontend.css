@@ -23,3 +23,15 @@
     border-radius: 4px;
     cursor: pointer;
 }
+
+.mct-error {
+    color: red;
+    font-size: 0.9em;
+    margin-top: -10px;
+    margin-bottom: 10px;
+}
+
+.mct-success {
+    color: green;
+    font-weight: bold;
+}
