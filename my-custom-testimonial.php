@@ -10,6 +10,7 @@
 defined('ABSPATH') || exit;
 
 // Load form handler
+require_once plugin_dir_path(__FILE__) . 'includes/shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/form-handler.php';
 
 // Register CPT
@@ -111,12 +112,15 @@ add_shortcode('testimonials', 'mct_testimonial_shortcode');
 // Enqueue frontend assets
 function mct_enqueue_assets()
 {
-    if (!is_admin()) {
-        wp_enqueue_style('mct-frontend-css', plugin_dir_url(__FILE__) . 'assets/css/frontend.css', [], '1.0');
-        wp_enqueue_script('mct-frontend-js', plugin_dir_url(__FILE__) . 'assets/js/frontend.js', [], '1.0', true);
-    }
+    wp_enqueue_style('mct-frontend-css', plugin_dir_url(__FILE__) . 'assets/css/frontend.css');
+    wp_enqueue_script('mct-frontend-js', plugin_dir_url(__FILE__) . 'assets/js/frontend.js', [], false, true);
+
+    wp_localize_script('mct-frontend-js', 'mct_ajax_object', [
+        'ajax_url' => admin_url('admin-ajax.php')
+    ]);
 }
 add_action('wp_enqueue_scripts', 'mct_enqueue_assets');
+
 
 // Plugin deactivation hook
 register_deactivation_hook(__FILE__, 'mct_deactivate_plugin');

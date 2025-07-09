@@ -1,48 +1,65 @@
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('.mct-testimonial-form');
 
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            const name = form.querySelector('input[name="mct_name"]');
-            const testimonial = form.querySelector('textarea[name="mct_testimonial"]');
-            const image = form.querySelector('input[name="mct_image"]');
-            let isValid = true;
+    if (!form) return;
 
-            // Remove old errors
-            form.querySelectorAll('.mct-error').forEach(el => el.remove());
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
 
-            // Name validation
-            if (!name.value.trim()) {
-                isValid = false;
-                name.insertAdjacentHTML('afterend', '<div class="mct-error">Name is required.</div>');
-            }
+        const formData = new FormData(form);
+        const messageBox = form.querySelector('.mct-message');
 
-            // Testimonial validation
-            if (!testimonial.value.trim()) {
-                isValid = false;
-                testimonial.insertAdjacentHTML('afterend', '<div class="mct-error">Testimonial is required.</div>');
-            }
+        if (!messageBox) return;
 
-            // Image validation
-            if (image.files.length > 0) {
-                const file = image.files[0];
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                const maxSize = 2 * 1024 * 1024; // 2MB
+        messageBox.style.display = 'none';
+        messageBox.innerHTML = '';
 
-                if (!allowedTypes.includes(file.type)) {
-                    isValid = false;
-                    image.insertAdjacentHTML('afterend', '<div class="mct-error">Invalid image format. Allowed: JPG, PNG, GIF, WebP.</div>');
+        // Basic field validation
+        const name = form.querySelector('input[name="mct_name"]');
+        const testimonial = form.querySelector('textarea[name="mct_testimonial"]');
+        const image = form.querySelector('input[name="mct_image"]');
+        let hasError = false;
+
+        form.querySelectorAll('.mct-error').forEach(el => el.remove());
+
+        if (!name.value.trim()) {
+            name.insertAdjacentHTML('afterend', '<div class="mct-error">Name is required.</div>');
+            hasError = true;
+        }
+
+        if (!testimonial.value.trim()) {
+            testimonial.insertAdjacentHTML('afterend', '<div class="mct-error">Testimonial is required.</div>');
+            hasError = true;
+        }
+
+        if (image.files.length === 0) {
+            image.insertAdjacentHTML('afterend', '<div class="mct-error">Image is required.</div>');
+            hasError = true;
+        }
+
+        if (hasError) return;
+
+        // ✅ AJAX Submission
+        fetch(mct_ajax_object.ajax_url, {
+            method: 'POST',
+            body: formData,
+        })
+            .then(res => res.text())
+            .then(response => {
+                messageBox.innerHTML = response;
+                messageBox.style.display = 'block';
+
+                if (response.includes('mct-success')) {
+                    form.reset();
+                    setTimeout(() => {
+                        messageBox.style.display = 'none';
+                        messageBox.innerHTML = '';
+                    }, 5000);
                 }
-
-                if (file.size > maxSize) {
-                    isValid = false;
-                    image.insertAdjacentHTML('afterend', '<div class="mct-error">Image is too large. Max size is 2MB.</div>');
-                }
-            }
-
-            if (!isValid) {
-                e.preventDefault();
-            }
-        });
-    }
+            })
+            .catch(() => {
+                messageBox.innerHTML = '<p class="mct-error">❌ Submission failed. Please try again later.</p>';
+                messageBox.style.display = 'block';
+            });
+    });
 });

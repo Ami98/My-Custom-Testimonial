@@ -35,3 +35,7 @@
     color: green;
     font-weight: bold;
 }
+
+.mct-message {
+    margin-top: 15px;
+}

@@ -1,59 +1,43 @@
 <?php
 
-// Shortcode: [testimonial_form]
-// Shortcode: [testimonial_form]
-function mct_testimonial_form_shortcode()
-{
-    ob_start(); ?>
-    <form action="" method="post" enctype="multipart/form-data" class="mct-testimonial-form">
-        <?php wp_nonce_field('mct_submit_testimonial', 'mct_nonce_field'); ?>
-        <p>
-            <label for="mct_name">Name *</label><br>
-            <input type="text" name="mct_name" required />
-        </p>
-        <p>
-            <label for="mct_testimonial">Your Testimonial *</label><br>
-            <textarea name="mct_testimonial" rows="5" required></textarea>
-        </p>
-        <p>
-            <label for="mct_image">Upload a Photo (optional)</label><br>
-            <input type="file" name="mct_image" accept="image/*" />
-        </p>
-        <p>
-            <input type="submit" name="mct_submit" value="Submit Testimonial" />
-        </p>
-    </form>
-<?php
 
-    if (isset($_POST['mct_submit'])) {
-        mct_handle_testimonial_submission();
-    }
 
-    return ob_get_clean();
-}
-add_shortcode('testimonial_form', 'mct_testimonial_form_shortcode');
+
+
+// Exit if accessed directly
+if (!defined('ABSPATH')) exit;
+
+// Handle AJAX submission
+add_action('wp_ajax_mct_submit_testimonial', 'mct_handle_testimonial_submission');
+add_action('wp_ajax_nopriv_mct_submit_testimonial', 'mct_handle_testimonial_submission');
+
 function mct_handle_testimonial_submission()
 {
+    // Check nonce
     if (
         !isset($_POST['mct_nonce_field']) ||
         !wp_verify_nonce($_POST['mct_nonce_field'], 'mct_submit_testimonial')
     ) {
-        echo '<p class="mct-error">❌ Security check failed.</p>';
-        return;
+        echo '<p class="mct-error">❌ Security check failed. Please refresh the page.</p>';
+        wp_die();
     }
 
     $errors = [];
 
+    // Validate name
     if (empty($_POST['mct_name'])) {
         $errors[] = 'Name is required.';
     }
 
+    // Validate testimonial
     if (empty($_POST['mct_testimonial'])) {
         $errors[] = 'Testimonial is required.';
     }
 
-    // Validate image if uploaded
-    if (!empty($_FILES['mct_image']['name'])) {
+    // Validate image (required)
+    if (empty($_FILES['mct_image']['name'])) {
+        $errors[] = 'Image is required.';
+    } else {
         $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         $max_size = 2 * 1024 * 1024; // 2MB
         $file_type = $_FILES['mct_image']['type'];
@@ -68,13 +52,15 @@ function mct_handle_testimonial_submission()
         }
     }
 
+    // Show validation errors
     if (!empty($errors)) {
         foreach ($errors as $error) {
             echo '<p class="mct-error">❌ ' . esc_html($error) . '</p>';
         }
-        return;
+        wp_die();
     }
 
+    // Sanitize and save
     $name = sanitize_text_field($_POST['mct_name']);
     $testimonial = sanitize_textarea_field($_POST['mct_testimonial']);
 
@@ -85,7 +71,8 @@ function mct_handle_testimonial_submission()
         'post_status'  => 'pending',
     ]);
 
-    if (!is_wp_error($post_id) && !empty($_FILES['mct_image']['name'])) {
+    if (!is_wp_error($post_id)) {
+        // Upload and attach the image
         require_once ABSPATH . 'wp-admin/includes/image.php';
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -94,7 +81,11 @@ function mct_handle_testimonial_submission()
         if (!is_wp_error($attachment_id)) {
             set_post_thumbnail($post_id, $attachment_id);
         }
+
+        echo '<p class="mct-success">✅ Thank you! Your testimonial has been submitted for review.</p>';
+    } else {
+        echo '<p class="mct-error">❌ Failed to save testimonial. Please try again.</p>';
     }
 
-    echo '<p class="mct-success">✅ Thank you! Your testimonial has been submitted for review.</p>';
+    wp_die(); // always required for AJAX
 }
