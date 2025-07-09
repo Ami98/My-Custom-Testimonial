@@ -74,6 +74,28 @@ function tp_testimonial_shortcode($atts)
 }
 add_shortcode('testimonials', 'tp_testimonial_shortcode');
 
+// Register Custom Taxonomies for Testimonials
+function tp_register_testimonial_taxonomies()
+{
+    // Category
+    register_taxonomy('testimonial_category', 'testimonial', array(
+        'label' => 'Categories',
+        'hierarchical' => true,
+        'show_admin_column' => true,
+        'rewrite' => array('slug' => 'testimonial-category'),
+    ));
+
+    // Tag
+    register_taxonomy('testimonial_tag', 'testimonial', array(
+        'label' => 'Tags',
+        'hierarchical' => false,
+        'show_admin_column' => true,
+        'rewrite' => array('slug' => 'testimonial-tag'),
+    ));
+}
+add_action('init', 'tp_register_testimonial_taxonomies');
+
+
 
 function tp_testimonial_styles()
 {
