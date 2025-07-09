@@ -45,9 +45,34 @@ add_action('init', 'tp_register_testimonial_post_type');
 // Shortcode to display testimonials
 function tp_testimonial_shortcode($atts)
 {
+    $atts = shortcode_atts(array(
+        'category' => '',
+        'tag' => '',
+        'posts' => -1,
+    ), $atts);
+
+    $tax_query = array('relation' => 'AND');
+
+    if (!empty($atts['category'])) {
+        $tax_query[] = array(
+            'taxonomy' => 'testimonial_category',
+            'field'    => 'slug',
+            'terms'    => explode(',', $atts['category']),
+        );
+    }
+
+    if (!empty($atts['tag'])) {
+        $tax_query[] = array(
+            'taxonomy' => 'testimonial_tag',
+            'field'    => 'slug',
+            'terms'    => explode(',', $atts['tag']),
+        );
+    }
+
     $args = array(
         'post_type' => 'testimonial',
-        'posts_per_page' => -1
+        'posts_per_page' => $atts['posts'],
+        'tax_query' => count($tax_query) > 1 ? $tax_query : '',
     );
 
     $query = new WP_Query($args);
@@ -72,6 +97,7 @@ function tp_testimonial_shortcode($atts)
     $output .= '</div>';
     return $output;
 }
+
 add_shortcode('testimonials', 'tp_testimonial_shortcode');
 
 // Register Custom Taxonomies for Testimonials
